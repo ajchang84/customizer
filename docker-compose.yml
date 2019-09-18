@@ -1,0 +1,8 @@
+version: "3"
+services:
+    server:
+        image: 10.10.10.54:3200/customizer/server
+        ports:
+            - "8081:8081"
+        command: yarn server
+        restart: always
