@@ -42,10 +42,12 @@ app.get("/api/getServerStatus", (req, res) => {
 
 app.get("/api/getRepo", (req, res) => {
     try {
-        utils.deleteFolderRecursive(`${__dirname}/GameCenter/`);
+        utils.deleteFolderRecursive(path.join(__dirname), "../../GameCenter/");
         child_process.execSync(`
-            git clone ssh://git@10.10.10.38:10022/jenkins/GameCenter.git ${__dirname}/GameCenter/
-        `);
+            git clone ssh://git@10.10.10.38:10022/jenkins/GameCenter.git ${path.join(
+                __dirname,
+                "../../GameCenter/"
+            )}`);
         // git clone --depth 1 --single-branch --branch BAC_QA_0.0.1_0917_1 ssh://git@10.10.10.38:10022/jenkins/baccaratV2.git
         console.log("Cloning done...");
         res.send({ code: 1, desc: "cloned" });
