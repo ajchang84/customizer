@@ -6,7 +6,7 @@ const cors = require("cors");
 const path = require("path");
 const _ = require("lodash");
 const fs = require("fs-extra");
-const { exec, execSync, spawn } = require("child_process");
+const { exec, execSync } = require("child_process");
 const request = require("request");
 const { searchRecursive, deleteFolderRecursive } = require("./utils");
 const SERVER_STATUS = require("./status");
@@ -16,6 +16,7 @@ const GAME_CENTER_PATH = path.join(__dirname, "../../GameCenter/");
 const GAME_TEXTURE_PATH = path.join(GAME_CENTER_PATH, "/assets/Texture/");
 const TEMPLATE_PATH = path.join(__dirname, "../../Template/");
 const TEMPLATE_TEXTURE_PATH = path.join(TEMPLATE_PATH, "/assets/Texture/");
+const DOWNLOAD_PATH = path.join(__dirname, "../../download/");
 
 // env
 require("dotenv").config();
@@ -56,13 +57,15 @@ app.get("/api/getRepo", (req, res) => {
 
 app.get("/api/download", (req, res) => {
     execSync(`zip -r archive *`, {
-        cwd: GAME_TEXTURE_PATH
+        cwd: DOWNLOAD_PATH
     });
 
-    res.download(path.join(GAME_TEXTURE_PATH, "/archive.zip"));
+    res.download(path.join(DOWNLOAD_PATH, "/archive.zip"));
 });
 
 app.get("/api/getAllTextures", (req, res) => {
+    deleteFolderRecursive(DOWNLOAD_PATH);
+    fs.mkdirSync(DOWNLOAD_PATH, { recursive: true });
     const traverseDir = (dir, csv) => {
         let data = [];
         fs.readdirSync(dir).forEach(file => {
@@ -75,6 +78,8 @@ app.get("/api/getAllTextures", (req, res) => {
                 file.match(/\.png$/) &&
                 !!csv[file.toLowerCase().replace(/\.png/, "")]
             ) {
+                fs.copyFileSync(fullPath, path.join(DOWNLOAD_PATH, file));
+
                 data.push({
                     path: fullPath.replace(GAME_TEXTURE_PATH, ""),
                     description: csv[file.toLowerCase().replace(/\.png/, "")]
