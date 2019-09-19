@@ -219,6 +219,7 @@ const buildProject = () => {
             console.log("package_start", body);
         }
     );
+
     // execSync(`rm -rf ${path.join(TEMPLATE_PATH, "/node_modules")}`);
     // execSync(`rm -rf ${__dirname}/Template/local`);
     // execSync(`rm -rf ${__dirname}/Template/library`);
