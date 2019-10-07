@@ -57,9 +57,15 @@ app.get("/api/download", (req, res) => {
     res.download(path.join(DOWNLOAD_PATH, "/archive.zip"));
 });
 
+const TEXTURE_FOLDERS = {
+    bac: "BAC",
+    bj21: "Bj"
+};
+
 app.get("/api/getAllTextures", (req, res) => {
     deleteFolderRecursive(DOWNLOAD_PATH);
     fs.mkdirSync(DOWNLOAD_PATH, { recursive: true });
+    console.log(req.query.project);
     const traverseDir = (dir, csv) => {
         let data = [];
         fs.readdirSync(dir).forEach(file => {
@@ -98,7 +104,16 @@ app.get("/api/getAllTextures", (req, res) => {
                     p[c.name.toLowerCase()] = c.description;
                     return p;
                 }, {});
-                const data = traverseDir(GAME_TEXTURE_PATH, csv);
+                const data = [
+                    ...traverseDir(
+                        path.join(
+                            GAME_TEXTURE_PATH,
+                            TEXTURE_FOLDERS[req.query.project]
+                        ),
+                        csv
+                    ),
+                    ...traverseDir(path.join(GAME_TEXTURE_PATH, "common"), csv)
+                ];
                 console.log("get_config_list texture", data.length, "files");
 
                 res.send(data);
@@ -112,93 +127,77 @@ app.get("/api/getTexture*", (req, res) => {
 });
 
 app.post("/api/uploadBatch", async (req, res) => {
-    request(
-        {
-            method: "POST",
-            form: { token: req.body.token },
-            uri: `${API_DOMAIN}${API_ROUTES.upload_start}`
-        },
-        (err, resp, body) => {
-            console.log("upload_start", body);
-            const { code, token = "" } = JSON.parse(body);
-            if (code === 1) {
-                const RANDOM_HASH = Math.random()
-                    .toString(36)
-                    .replace(/[^a-z]+/g, "")
-                    .substr(0, 5);
-                console.log("Uploading...", RANDOM_HASH);
-                try {
-                    // deleteFolderRecursive(TEMPLATE_PATH);
-                    fs.mkdirSync(path.join(TEMPLATE_PATH, RANDOM_HASH), {
-                        recursive: true
-                    });
-                    fs.copySync(
-                        GAME_CENTER_PATH,
-                        path.join(TEMPLATE_PATH, RANDOM_HASH)
-                    );
-                    if (!req.files) {
-                        res.send({
-                            code: -1,
-                            desc: "No file uploaded"
-                        });
-                    } else {
-                        let data = [];
-                        _.forEach(_.keysIn(req.files.images), key => {
-                            let image = req.files.images[key];
-                            let files = searchRecursive(
-                                path.join(
-                                    TEMPLATE_PATH,
-                                    RANDOM_HASH,
-                                    "/assets/Texture/"
-                                ),
-                                image.name
-                            );
-                            files.forEach(file => {
-                                image.mv(`${file}/` + image.name);
-                            });
-                            data.push({
-                                name: image.name,
-                                mimetype: image.mimetype,
-                                size: image.size
-                            });
-                        });
+    const { token, project } = req.body;
+    const RANDOM_HASH = Math.random()
+        .toString(36)
+        .replace(/[^a-z]+/g, "")
+        .substr(0, 5);
+    console.log("Uploading...", RANDOM_HASH, project, token);
+    try {
+        fs.mkdirSync(path.join(TEMPLATE_PATH, RANDOM_HASH), {
+            recursive: true
+        });
+        fs.copySync(GAME_CENTER_PATH, path.join(TEMPLATE_PATH, RANDOM_HASH));
+        if (!req.files) {
+            res.send({
+                code: -1,
+                desc: "No file uploaded"
+            });
+        } else {
+            let data = [];
+            _.forEach(_.keysIn(req.files.images), key => {
+                let image = req.files.images[key];
+                let files = searchRecursive(
+                    path.join(TEMPLATE_PATH, RANDOM_HASH, "/assets/Texture/"),
+                    image.name
+                );
+                files.forEach(file => {
+                    image.mv(`${file}/` + image.name);
+                });
+                data.push({
+                    name: image.name,
+                    mimetype: image.mimetype,
+                    size: image.size
+                });
+            });
+
+            SERVER_STATUS.change(2);
+            console.log("Finished uploading...");
+            request(
+                {
+                    method: "POST",
+                    form: { token },
+                    uri: `${API_DOMAIN}${API_ROUTES.upload_done}`
+                },
+                (err, resp, body) => {
+                    const { code, desc } = JSON.parse(body);
+                    console.log(body);
+                    if (code === 1) {
+                        console.log("upload_done", desc);
+                        console.log("Winding up builder...");
+                        setTimeout(
+                            () => buildProject(RANDOM_HASH, token, project),
+                            1500
+                        );
 
                         res.send({
                             code: 1,
                             desc: "Files are uploaded",
                             data: data
                         });
-
-                        SERVER_STATUS.change(2);
-                        console.log("Finished uploading...");
-                        request(
-                            {
-                                method: "POST",
-                                form: { token: token },
-                                uri: `${API_DOMAIN}${API_ROUTES.upload_done}`
-                            },
-                            (err, resp, body) => {
-                                console.log("upload_done", body);
-                            }
-                        );
-                        console.log("Winding up builder...");
-
-                        setTimeout(
-                            () => buildProject(RANDOM_HASH, token),
-                            3000
-                        );
+                    } else {
+                        console.log("upload_done_fail", code, desc);
+                        res.send(body);
                     }
-                } catch (err) {
-                    res.status(500).send(err);
                 }
-            } else {
-                res.send(body);
-            }
+            );
         }
-    );
+    } catch (err) {
+        res.status(500).send({ desc: err });
+    }
 });
 
-const buildProject = (randomHash, token) => {
+const buildProject = (randomHash, token, project) => {
     console.log("Building with cocos...");
 
     request(
@@ -213,7 +212,7 @@ const buildProject = (randomHash, token) => {
     );
 
     exec(
-        "node gameSettingBuilder.js bac",
+        `node gameSettingBuilder.js ${project}`,
         { cwd: path.join(TEMPLATE_PATH, randomHash) },
         (error, stdout, stderr) => {
             console.log(stdout);
@@ -234,34 +233,35 @@ const buildProject = (randomHash, token) => {
             });
             cocosBuilder.on("exit", code => {
                 console.log("Done building with cocos with code:", code);
-                setTimeout(() => moveProject(randomHash, token), 3000);
+                setTimeout(() => moveProject(randomHash, token, project), 3000);
             });
-
-            // exec(
-            //     `/Applications/CocosCreator3.app/Contents/MacOS/CocosCreator --path ${path.join(
-            //         TEMPLATE_PATH,
-            //         randomHash
-            //     )} --build "platform=web-desktop;md5Cache=false;"`,
-            //     (err, stdout, stderr) => {
-            //         console.log("Done building with cocos...", stdout);
-            //         // setTimeout(() => moveProject(randomHash), 3000);
-            //     }
-            // );
         }
     );
 };
 
-const moveProject = (randomHash, token) => {
+const PROJECT_PATH = {
+    bac: "ASBaccarat",
+    bj21: "ASBJ21"
+};
+
+const PROJECT_URL = {
+    bac: "baccarat",
+    bj21: "bj21"
+};
+
+const moveProject = (randomHash, token, project) => {
     console.log(`Moving project to ${randomHash}`);
     execSync(`
-        ssh develop@10.10.10.40 -p 9527 "mkdir Dev_hotUpdate/web/GameCenter/ASBaccarat/res/${randomHash}"
+        ssh develop@10.10.10.40 -p 9527 "mkdir Dev_hotUpdate/web/GameCenter/${PROJECT_PATH[project]}/res/${randomHash}"
     `);
     execSync(`
         scp -P 9527 -r ${path.join(
             TEMPLATE_PATH,
             randomHash,
             "/build/web-desktop/res/raw-assets"
-        )} develop@10.10.10.40:Dev_hotUpdate/web/GameCenter/ASBaccarat/res/${randomHash}
+        )} develop@10.10.10.40:Dev_hotUpdate/web/GameCenter/${
+        PROJECT_PATH[project]
+    }/res/${randomHash}
     `);
     console.log("Done moving project...");
     request(
@@ -269,7 +269,7 @@ const moveProject = (randomHash, token) => {
             method: "POST",
             form: {
                 token,
-                demo_url: `http://10.10.10.40:84/baccarat/?temp=${randomHash}`
+                demo_url: `http://10.10.10.40:84/${PROJECT_URL[project]}/?temp=${randomHash}`
             },
             uri: `${API_DOMAIN}${API_ROUTES.package_done}`
         },
