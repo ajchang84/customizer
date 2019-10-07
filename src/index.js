@@ -59,7 +59,7 @@ app.get("/api/download", (req, res) => {
 
 const TEXTURE_FOLDERS = {
     bac: "BAC",
-    bj21: "Bj"
+    bj: "Bj"
 };
 
 app.get("/api/getAllTextures", (req, res) => {
@@ -241,12 +241,12 @@ const buildProject = (randomHash, token, project) => {
 
 const PROJECT_PATH = {
     bac: "ASBaccarat",
-    bj21: "ASBJ21"
+    bj: "ASBJ21"
 };
 
 const PROJECT_URL = {
     bac: "baccarat",
-    bj21: "bj21"
+    bj: "bj21"
 };
 
 const moveProject = (randomHash, token, project) => {
