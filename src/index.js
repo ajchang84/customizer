@@ -282,15 +282,18 @@ const moveProject = (randomHash, token) => {
 
 cron.schedule("59 23 * * *", function() {
     console.log("Running a task from cron");
-    // try {
-    //     deleteFolderRecursive(GAME_CENTER_PATH);
-    //     execSync(
-    //         `git clone ssh://git@10.10.10.38:10022/jenkins/GameCenter.git ${GAME_CENTER_PATH}`
-    //     );
-    //     console.log("Cloning done...");
-    // } catch (err) {
-    //     console.log("Cloning failed...");
-    // }
+    try {
+        // deleteFolderRecursive(GAME_CENTER_PATH);
+        // execSync(
+        //     `git clone ssh://git@10.10.10.38:10022/jenkins/GameCenter.git ${GAME_CENTER_PATH}`
+        // );
+        // console.log("Cloning done...");
+        deleteFolderRecursive(TEMPLATE_PATH);
+        fs.mkdirSync(TEMPLATE_PATH, { recursive: true });
+        console.log("Clearing all templates done...");
+    } catch (err) {
+        console.log("Clearing all templates failed...");
+    }
 });
 
 app.listen(process.env.PORT || 8080, () =>
