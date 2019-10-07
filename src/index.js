@@ -70,7 +70,7 @@ app.get("/api/getAllTextures", (req, res) => {
         let data = [];
         fs.readdirSync(dir).forEach(file => {
             let fullPath = path.join(dir, file);
-            console.log(fullpath);
+            console.log(fullPath);
             if (fs.lstatSync(fullPath).isDirectory()) {
                 data = data.concat(traverseDir(fullPath, csv));
             }
