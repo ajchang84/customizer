@@ -37,11 +37,18 @@ const SERVER_STATUS_DESC = {
 };
 
 app.get("/api/getServerStatus", (req, res) => {
-    res.send({ code: 1, desc: SERVER_STATUS_DESC[SERVER_STATUS.get()] });
+    res.send({
+        code: SERVER_STATUS.get(),
+        desc: SERVER_STATUS_DESC[SERVER_STATUS.get()]
+    });
 });
 
 app.get("/api/setServerStatus", (req, res) => {
     SERVER_STATUS.change(Number(req.query.code));
+    res.send({
+        code: 1,
+        desc: "success"
+    });
 });
 
 app.get("/api/getRepo", (req, res) => {
