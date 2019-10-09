@@ -31,8 +31,17 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("dist"));
 
+const SERVER_STATUS_DESC = {
+    1: "Service ready",
+    2: "Service under maintanence"
+};
+
 app.get("/api/getServerStatus", (req, res) => {
-    res.send({ status: SERVER_STATUS.get() });
+    res.send({ code: 1, desc: SERVER_STATUS_DESC[SERVER_STATUS.get()] });
+});
+
+app.get("/api/setServerStatus", (req, res) => {
+    SERVER_STATUS.change(Number(req.query.code));
 });
 
 app.get("/api/getRepo", (req, res) => {
@@ -63,9 +72,9 @@ const TEXTURE_FOLDERS = {
 };
 
 app.get("/api/getAllTextures", (req, res) => {
+    let project = req.query.project || "bac";
     deleteFolderRecursive(DOWNLOAD_PATH);
     fs.mkdirSync(DOWNLOAD_PATH, { recursive: true });
-    console.log(req.query.project);
     const traverseDir = (dir, csv) => {
         let data = [];
         fs.readdirSync(dir).forEach(file => {
@@ -107,10 +116,7 @@ app.get("/api/getAllTextures", (req, res) => {
                 }, {});
                 const data = [
                     ...traverseDir(
-                        path.join(
-                            GAME_TEXTURE_PATH,
-                            TEXTURE_FOLDERS[req.query.project]
-                        ),
+                        path.join(GAME_TEXTURE_PATH, TEXTURE_FOLDERS[project]),
                         csv
                     ),
                     ...traverseDir(path.join(GAME_TEXTURE_PATH, "common"), csv)
@@ -162,7 +168,6 @@ app.post("/api/uploadBatch", async (req, res) => {
                 });
             });
 
-            SERVER_STATUS.change(2);
             console.log("Finished uploading...");
             request(
                 {
@@ -278,7 +283,6 @@ const moveProject = (randomHash, token, project) => {
             console.log("package_done", body);
         }
     );
-    SERVER_STATUS.change(1);
 };
 
 cron.schedule("59 23 * * *", function() {
