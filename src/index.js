@@ -59,6 +59,16 @@ app.get("/api/getRepo", (req, res) => {
             // git clone --depth 1 --single-branch --branch BAC_QA_0.0.1_0917_1 ssh://git@10.10.10.38:10022/jenkins/baccaratV2.git
         );
         console.log("Cloning done...");
+        // request(
+        //     {
+        //         method: "GET",
+        //         uri: `${API_DOMAIN}${API_ROUTES.clean_list}`
+        //     },
+        //     (err, resp, body) => {
+        //         const { code } = JSON.parse(body);
+        //         console.log("clean_list", code);
+        //     }
+        // );
         res.send({ code: 1, desc: "cloned" });
     } catch (err) {
         res.send({ code: -1, desc: "cloning failed" });
@@ -69,8 +79,19 @@ app.get("/api/download", (req, res) => {
     execSync(`zip -r archive *`, {
         cwd: DOWNLOAD_PATH
     });
-
-    res.download(path.join(DOWNLOAD_PATH, "/archive.zip"));
+    const currentdate = new Date();
+    const datetime =
+        currentdate.getFullYear() +
+        "_" +
+        (currentdate.getMonth() + 1) +
+        "_" +
+        currentdate.getDate() +
+        "_" +
+        currentdate.getHours() +
+        "_" +
+        currentdate.getMinutes() +
+        "_";
+    res.download(path.join(DOWNLOAD_PATH, `/${datetime}.zip`));
 });
 
 const TEXTURE_FOLDERS = {
@@ -216,7 +237,7 @@ const buildProject = (randomHash, token, project) => {
     request(
         {
             method: "POST",
-            form: { token },
+            form: { token, project },
             uri: `${API_DOMAIN}${API_ROUTES.package_start}`
         },
         (err, resp, body) => {
