@@ -85,10 +85,10 @@ app.get("/api/download", (req, res) => {
         currentdate.getDate() +
         "_" +
         currentdate.getHours() +
-        currentdate.getMinutes() +
-        execSync(`zip -r ${datetime} *`, {
-            cwd: DOWNLOAD_PATH
-        });
+        currentdate.getMinutes();
+    execSync(`zip -r ${datetime} *`, {
+        cwd: DOWNLOAD_PATH
+    });
     res.download(path.join(DOWNLOAD_PATH, `/${datetime}.zip`));
 });
 
