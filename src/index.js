@@ -31,6 +31,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("dist"));
 
+let VERSION = "0.0.1";
+
+fs.readFile("version.json", (err, data) => {
+    if (err) throw err;
+    const { gamecenter } = JSON.parse(data);
+    VERSION = gamecenter;
+});
+
 const SERVER_STATUS_DESC = {
     1: "Service ready",
     2: "Service under maintanence"
@@ -51,6 +59,14 @@ app.get("/api/setServerStatus", (req, res) => {
     });
 });
 
+app.get("/api/getVersion", (req, res) => {
+    res.send({
+        code: 1,
+        desc: "success",
+        data: VERSION
+    });
+});
+
 app.get("/api/getRepo", (req, res) => {
     try {
         deleteFolderRecursive(GAME_CENTER_PATH);
@@ -59,16 +75,11 @@ app.get("/api/getRepo", (req, res) => {
             // git clone --depth 1 --single-branch --branch BAC_QA_0.0.1_0917_1 ssh://git@10.10.10.38:10022/jenkins/baccaratV2.git
         );
         console.log("Cloning done...");
-        // request(
-        //     {
-        //         method: "GET",
-        //         uri: `${API_DOMAIN}${API_ROUTES.clean_list}`
-        //     },
-        //     (err, resp, body) => {
-        //         const { code } = JSON.parse(body);
-        //         console.log("clean_list", code);
-        //     }
-        // );
+
+        const [major, minor, patch] = VERSION.split(".");
+        VERSION = [major, minor, Number(patch) + 1].join(".");
+        fs.writeFileSync("version.json", JSON.stringify(VERSION));
+        console.log("Change to version", VERSION);
         res.send({ code: 1, desc: "cloned" });
     } catch (err) {
         res.send({ code: -1, desc: "cloning failed" });
@@ -236,7 +247,7 @@ const buildProject = (randomHash, token, project) => {
     request(
         {
             method: "POST",
-            form: { token, project },
+            form: { token, project, gamecenter_version: VERSION },
             uri: `${API_DOMAIN}${API_ROUTES.package_start}`
         },
         (err, resp, body) => {
