@@ -76,21 +76,19 @@ app.get("/api/getRepo", (req, res) => {
 });
 
 app.get("/api/download", (req, res) => {
-    execSync(`zip -r archive *`, {
-        cwd: DOWNLOAD_PATH
-    });
+    let project = req.query.project || "bac";
     const currentdate = new Date();
     const datetime =
+        project +
         currentdate.getFullYear() +
-        "_" +
         (currentdate.getMonth() + 1) +
-        "_" +
         currentdate.getDate() +
         "_" +
         currentdate.getHours() +
-        "_" +
         currentdate.getMinutes() +
-        "_";
+        execSync(`zip -r ${datetime} *`, {
+            cwd: DOWNLOAD_PATH
+        });
     res.download(path.join(DOWNLOAD_PATH, `/${datetime}.zip`));
 });
 
