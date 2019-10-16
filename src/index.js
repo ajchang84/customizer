@@ -129,7 +129,7 @@ app.get("/api/getAllTextures", checkServer, (req, res) => {
         let data = [];
         fs.readdirSync(dir).forEach(file => {
             let fullPath = path.join(dir, file);
-            console.log(fullPath);
+            // console.log(fullPath);
             if (fs.lstatSync(fullPath).isDirectory()) {
                 data = data.concat(traverseDir(fullPath, csv));
             }
@@ -179,7 +179,7 @@ app.get("/api/getAllTextures", checkServer, (req, res) => {
     );
 });
 
-app.get("/api/getTexture*", checkServer, (req, res) => {
+app.get("/api/getTexture*", (req, res) => {
     res.sendFile(path.join(GAME_TEXTURE_PATH, `/${req.params[0]}`));
 });
 
