@@ -44,6 +44,17 @@ const SERVER_STATUS_DESC = {
     2: "Service under maintanence"
 };
 
+function checkServer(req, res, next) {
+    if (SERVER_STATUS.get() === 1) {
+        next();
+    } else {
+        res.send({
+            code: 999,
+            desc: "维护中"
+        });
+    }
+}
+
 app.get("/api/getServerStatus", (req, res) => {
     res.send({
         code: SERVER_STATUS.get(),
@@ -59,7 +70,7 @@ app.get("/api/setServerStatus", (req, res) => {
     });
 });
 
-app.get("/api/getVersion", (req, res) => {
+app.get("/api/getVersion", checkServer, (req, res) => {
     res.send({
         code: 1,
         desc: "success",
@@ -86,7 +97,7 @@ app.get("/api/getRepo", (req, res) => {
     }
 });
 
-app.get("/api/download", (req, res) => {
+app.get("/api/download", checkServer, (req, res) => {
     let project = req.query.project || "bac";
     const currentdate = new Date();
     const datetime =
@@ -109,7 +120,7 @@ const TEXTURE_FOLDERS = {
     bj: "Bj"
 };
 
-app.get("/api/getAllTextures", (req, res) => {
+app.get("/api/getAllTextures", checkServer, (req, res) => {
     let project = req.query.project || "bac";
     deleteFolderRecursive(DOWNLOAD_PATH);
     fs.mkdirSync(DOWNLOAD_PATH, { recursive: true });
@@ -167,78 +178,105 @@ app.get("/api/getAllTextures", (req, res) => {
     );
 });
 
-app.get("/api/getTexture*", (req, res) => {
+app.get("/api/getTexture*", checkServer, (req, res) => {
     res.sendFile(path.join(GAME_TEXTURE_PATH, `/${req.params[0]}`));
 });
 
-app.post("/api/uploadBatch", async (req, res) => {
-    const { token, project } = req.body;
-    const RANDOM_HASH = Math.random()
-        .toString(36)
-        .replace(/[^a-z]+/g, "")
-        .substr(0, 5);
-    console.log("Uploading...", RANDOM_HASH, project, token);
-    try {
-        fs.mkdirSync(path.join(TEMPLATE_PATH, RANDOM_HASH), {
-            recursive: true
-        });
-        fs.copySync(GAME_CENTER_PATH, path.join(TEMPLATE_PATH, RANDOM_HASH));
-        if (!req.files) {
-            res.send({
-                code: -1,
-                desc: "No file uploaded"
-            });
-        } else {
-            let data = [];
-            _.forEach(_.keysIn(req.files.images), key => {
-                let image = req.files.images[key];
-                let files = searchRecursive(
-                    path.join(TEMPLATE_PATH, RANDOM_HASH, "/assets/Texture/"),
-                    image.name
-                );
-                files.forEach(file => {
-                    image.mv(`${file}/` + image.name);
-                });
-                data.push({
-                    name: image.name,
-                    mimetype: image.mimetype,
-                    size: image.size
-                });
-            });
-
-            console.log("Finished uploading...");
-            request(
-                {
-                    method: "POST",
-                    form: { token },
-                    uri: `${API_DOMAIN}${API_ROUTES.upload_done}`
-                },
-                (err, resp, body) => {
-                    const { code, desc } = JSON.parse(body);
-                    console.log(body);
-                    if (code === 1) {
-                        console.log("upload_done", desc);
-                        console.log("Winding up builder...");
-                        setTimeout(
-                            () => buildProject(RANDOM_HASH, token, project),
-                            1500
-                        );
-
+app.post("/api/uploadBatch", checkServer, async (req, res) => {
+    const { token: rootToken, project } = req.body;
+    request(
+        {
+            method: "POST",
+            form: { token: rootToken },
+            uri: `${API_DOMAIN}${API_ROUTES.upload_start}`
+        },
+        (err, resp, body) => {
+            console.log("upload_start", body);
+            const { code, token = "" } = JSON.parse(body);
+            if (code === 1) {
+                const RANDOM_HASH = Math.random()
+                    .toString(36)
+                    .replace(/[^a-z]+/g, "")
+                    .substr(0, 5);
+                console.log("Uploading...", RANDOM_HASH, project, token);
+                try {
+                    fs.mkdirSync(path.join(TEMPLATE_PATH, RANDOM_HASH), {
+                        recursive: true
+                    });
+                    fs.copySync(
+                        GAME_CENTER_PATH,
+                        path.join(TEMPLATE_PATH, RANDOM_HASH)
+                    );
+                    if (!req.files) {
                         res.send({
-                            code: 1,
-                            desc: "Files are uploaded",
-                            data: data
+                            code: -1,
+                            desc: "No file uploaded"
                         });
                     } else {
-                        console.log("upload_done_fail", code, desc);
-                        res.send(body);
+                        let data = [];
+                        _.forEach(_.keysIn(req.files.images), key => {
+                            let image = req.files.images[key];
+                            let files = searchRecursive(
+                                path.join(
+                                    TEMPLATE_PATH,
+                                    RANDOM_HASH,
+                                    "/assets/Texture/"
+                                ),
+                                image.name
+                            );
+                            files.forEach(file => {
+                                image.mv(`${file}/` + image.name);
+                            });
+                            data.push({
+                                name: image.name,
+                                mimetype: image.mimetype,
+                                size: image.size
+                            });
+                        });
+
+                        console.log("Finished uploading...");
+                        request(
+                            {
+                                method: "POST",
+                                form: { token },
+                                uri: `${API_DOMAIN}${API_ROUTES.upload_done}`
+                            },
+                            (err, resp, body) => {
+                                const { code, desc } = JSON.parse(body);
+                                console.log(body);
+                                if (code === 1) {
+                                    console.log("upload_done", desc);
+                                    console.log("Winding up builder...");
+                                    setTimeout(
+                                        () =>
+                                            buildProject(
+                                                RANDOM_HASH,
+                                                token,
+                                                project
+                                            ),
+                                        1500
+                                    );
+
+                                    res.send({
+                                        code: 1,
+                                        desc: "Files are uploaded",
+                                        data: data
+                                    });
+                                } else {
+                                    console.log("upload_done_fail", code, desc);
+                                    res.send(body);
+                                }
+                            }
+                        );
                     }
+                } catch (err) {
+                    res.status(500).send({ desc: err });
                 }
-            );
+            } else {
+                res.send(body);
+            }
         }
-    } catch (err) {
-        res.status(500).send({ desc: err });
-    }
+    );
 });
 
 const buildProject = (randomHash, token, project) => {
