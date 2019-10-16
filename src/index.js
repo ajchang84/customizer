@@ -103,6 +103,7 @@ app.get("/api/getRepo", (req, res) => {
 });
 
 app.get("/api/download", (req, res)=>{
+    console.log('test')
     res.redirect(req.originalUrl)
 }), (req, res) => {
     let project = req.query.project || "bac";
