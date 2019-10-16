@@ -45,6 +45,7 @@ const SERVER_STATUS_DESC = {
 };
 
 function checkServer(req, res, next) {
+    console.log("check server");
     if (SERVER_STATUS.get() === 1) {
         next();
     } else {
