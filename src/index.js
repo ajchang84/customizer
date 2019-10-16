@@ -37,6 +37,7 @@ fs.readFile("version.json", (err, data) => {
     if (err) throw err;
     const { gamecenter } = JSON.parse(data);
     VERSION = gamecenter;
+    console.log("version", VERSION);
 });
 
 const SERVER_STATUS_DESC = {
