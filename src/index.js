@@ -91,7 +91,10 @@ app.get("/api/getRepo", (req, res) => {
 
         const [major, minor, patch] = VERSION.split(".");
         VERSION = [major, minor, Number(patch) + 1].join(".");
-        fs.writeFileSync("version.json", JSON.stringify(VERSION));
+        fs.writeFileSync(
+            "version.json",
+            JSON.stringify({ game_center: VERSION })
+        );
         console.log("Change to version", VERSION);
         res.send({ code: 1, desc: "cloned" });
     } catch (err) {
