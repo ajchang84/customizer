@@ -102,7 +102,9 @@ app.get("/api/getRepo", (req, res) => {
     }
 });
 
-app.get("/api/download", checkServer, (req, res) => {
+app.get("/api/download", (req, res)=>{
+    res.redirect(req.originalUrl)
+}), (req, res) => {
     let project = req.query.project || "bac";
     const currentdate = new Date();
     const datetime =
