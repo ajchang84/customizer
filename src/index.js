@@ -102,30 +102,23 @@ app.get("/api/getRepo", (req, res) => {
     }
 });
 
-app.get(
-    "/api/download",
-    (req, res) => {
-        console.log("test");
-        res.redirect("/");
-    },
-    (req, res) => {
-        let project = req.query.project || "bac";
-        const currentdate = new Date();
-        const datetime =
-            project +
-            "_" +
-            currentdate.getFullYear() +
-            (currentdate.getMonth() + 1) +
-            currentdate.getDate() +
-            "_" +
-            currentdate.getHours() +
-            currentdate.getMinutes();
-        execSync(`zip -r ${datetime} *`, {
-            cwd: DOWNLOAD_PATH
-        });
-        res.download(path.join(DOWNLOAD_PATH, `/${datetime}.zip`));
-    }
-);
+app.get("/api/download", checkServer, (req, res) => {
+    let project = req.query.project || "bac";
+    const currentdate = new Date();
+    const datetime =
+        project +
+        "_" +
+        currentdate.getFullYear() +
+        (currentdate.getMonth() + 1) +
+        currentdate.getDate() +
+        "_" +
+        currentdate.getHours() +
+        currentdate.getMinutes();
+    execSync(`zip -r ${datetime} *`, {
+        cwd: DOWNLOAD_PATH
+    });
+    res.download(path.join(DOWNLOAD_PATH, `/${datetime}.zip`));
+});
 
 const TEXTURE_FOLDERS = {
     bac: "BAC",
