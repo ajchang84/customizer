@@ -106,7 +106,7 @@ app.get(
     "/api/download",
     (req, res) => {
         console.log("test");
-        res.redirect(req.originalUrl);
+        res.redirect("/");
     },
     (req, res) => {
         let project = req.query.project || "bac";
