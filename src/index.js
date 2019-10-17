@@ -356,7 +356,7 @@ const moveProject = (randomHash, token, project) => {
             method: "POST",
             form: {
                 token,
-                demo_url: `http://10.10.10.40:84/${PROJECT_URL[project]}/?temp=${randomHash}`
+                demo_url: `http://10.10.10.40:84/${PROJECT_URL[project]}/?temp=${randomHash}&isPortrait=0`
             },
             uri: `${API_DOMAIN}${API_ROUTES.package_done}`
         },
